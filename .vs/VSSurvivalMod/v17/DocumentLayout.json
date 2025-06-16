@@ -1,0 +1,54 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\sstep\\source\\VSVanilla\\vssurvivalmod_safwyl\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{03328BE2-C6F2-A7AD-BBB9-50363293434E}|VSSurvivalMod.csproj|c:\\users\\sstep\\source\\vsvanilla\\vssurvivalmod_safwyl\\entity\\behavior\\behaviorstamina.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03328BE2-C6F2-A7AD-BBB9-50363293434E}|VSSurvivalMod.csproj|solutionrelative:entity\\behavior\\behaviorstamina.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{03328BE2-C6F2-A7AD-BBB9-50363293434E}|VSSurvivalMod.csproj|c:\\users\\sstep\\source\\vsvanilla\\vssurvivalmod_safwyl\\entity\\behavior\\behaviorrideable.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{03328BE2-C6F2-A7AD-BBB9-50363293434E}|VSSurvivalMod.csproj|solutionrelative:entity\\behavior\\behaviorrideable.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "BehaviorStamina.cs",
+              "DocumentMoniker": "C:\\Users\\sstep\\source\\VSVanilla\\vssurvivalmod_safwyl\\Entity\\Behavior\\BehaviorStamina.cs",
+              "RelativeDocumentMoniker": "Entity\\Behavior\\BehaviorStamina.cs",
+              "ToolTip": "C:\\Users\\sstep\\source\\VSVanilla\\vssurvivalmod_safwyl\\Entity\\Behavior\\BehaviorStamina.cs",
+              "RelativeToolTip": "Entity\\Behavior\\BehaviorStamina.cs",
+              "ViewState": "AgIAAF8AAAAAAAAAAAAAAC8BAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-15T17:55:08.571Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "BehaviorRideable.cs",
+              "DocumentMoniker": "C:\\Users\\sstep\\source\\VSVanilla\\vssurvivalmod_safwyl\\Entity\\Behavior\\BehaviorRideable.cs",
+              "RelativeDocumentMoniker": "Entity\\Behavior\\BehaviorRideable.cs",
+              "ToolTip": "C:\\Users\\sstep\\source\\VSVanilla\\vssurvivalmod_safwyl\\Entity\\Behavior\\BehaviorRideable.cs",
+              "RelativeToolTip": "Entity\\Behavior\\BehaviorRideable.cs",
+              "ViewState": "AgIAAC0CAAAAAAAAAIAwwGACAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-15T02:08:08.731Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
