@@ -124,6 +124,9 @@ namespace Vintagestory.GameContent
         {
             base.Initialize(properties, attributes);
 
+            api = entity.Api;
+            capi = api as ICoreClientAPI;
+
             // /entity spawn semitameddeer-elk-male-adult 1
             if (attributes["saddleBreaksRequired"].Exists)
             {
@@ -136,9 +139,6 @@ namespace Vintagestory.GameContent
                 tamedEntityCode = attributes["tamedEntityCode"].AsString();
                 saddleBreakGaitCode = attributes["saddleBreakGait"].AsString();
             }
-
-            api = entity.Api;
-            capi = api as ICoreClientAPI;
 
             Controls = attributes["controls"].AsObject<FastSmallDictionary<string, ControlMeta>>();
             minGeneration = attributes["minGeneration"].AsInt(0);

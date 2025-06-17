@@ -2,7 +2,7 @@
   <PropertyGroup>
     <AssemblyName>VSSurvivalMod</AssemblyName>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
-    <TargetFramework>$(FrameworkVersion)</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <OutputPath>..\bin\$(Configuration)</OutputPath>
     <Configurations>Debug;Release;PerfTest</Configurations>
     <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
@@ -18,14 +18,44 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="OpenTK" Version="4.9.4" />
     <PackageReference Include="protobuf-net" Version="2.4.9" />
     <PackageReference Include="OpenTK.Windowing.GraphicsLibraryFramework" Version="4.9.4" />
+    <PackageReference Include="SkiaSharp" Version="3.119.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Cairo\Cairo.csproj" />
-    <ProjectReference Include="..\VintagestoryApi\VintagestoryAPI.csproj" />
-    <ProjectReference Include="..\VSCreativeMod\VSCreativeMod.csproj" />
-    <ProjectReference Include="..\VSEssentials\VSEssentialsMod.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<Reference Include="VintagestoryAPI">
+			<HintPath>$(APPDATA)/vintagestory_prerelease/VintagestoryAPI.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="VSEssentials">
+			<HintPath>$(APPDATA)/vintagestory_prerelease/Mods/VSEssentials.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="VSCreativeMod">
+			<HintPath>$(APPDATA)/vintagestory_prerelease/Mods/VSCreativeMod.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Newtonsoft.Json">
+			<HintPath>$(APPDATA)/vintagestory_prerelease/Lib/Newtonsoft.Json.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="Lib.Harmony">
+			<HintPath>$(APPDATA)/vintagestory_prerelease/Lib/0Harmony.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="VintagestoryLib">
+			<HintPath>$(APPDATA)/vintagestory_prerelease/VintagestoryLib.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="protobuf-net">
+			<HintPath>$(APPDATA)/vintagestory_prerelease/Lib/protobuf-net.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+		<Reference Include="cairo-sharp">
+			<HintPath>$(APPDATA)/vintagestory_prerelease/Lib/cairo-sharp.dll</HintPath>
+			<Private>False</Private>
+		</Reference>
+	</ItemGroup>
 </Project>
