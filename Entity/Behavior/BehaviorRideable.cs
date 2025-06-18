@@ -21,7 +21,7 @@ namespace Vintagestory.GameContent
         Press
     }
 
-    public class EntityBehaviorRideable : EntityBehaviorSeatable, IMountable, IRenderer, IMountableListener
+    public class EntityBehaviorRideable(Entity entity) : EntityBehaviorSeatable(entity), IMountable, IRenderer, IMountableListener
     {
         public List<GaitMeta> RideableGaitOrder = new(); // List of gaits in order of increasing speed for the rideable entity
         public Vec3f MountAngle { get; set; } = new Vec3f();
@@ -46,7 +46,7 @@ namespace Vintagestory.GameContent
         // Time the player last jumped.
         protected long lastJumpMs;
         protected bool jumpNow;
-        protected EntityAgent eagent;
+        protected EntityAgent eagent = entity as EntityAgent;
         protected long lastGaitChangeMs = 0;
         protected float timeSinceLastGaitCheck = 0;
         protected float timeSinceLastGaitFatigue = 0;
@@ -108,11 +108,6 @@ namespace Vintagestory.GameContent
             {
                 entity.WatchedAttributes.SetDouble("lastDismountTotalHours", value);
             }
-        }
-
-        public EntityBehaviorRideable(Entity entity) : base(entity)
-        {
-            eagent = entity as EntityAgent;
         }
 
         protected override IMountableSeat CreateSeat(string seatId, SeatConfig config)
@@ -304,6 +299,8 @@ namespace Vintagestory.GameContent
         {
             currentGait ??= ebg.CurrentGait;
 
+            if (eagent.Swimming) return forward ? ebg.Gaits["swim"] : ebg.Gaits["swimback"];
+
             if (RideableGaitOrder is not null && RideableGaitOrder.Count > 0 && this.IsBeingControlled())
             {
                 int currentIndex = RideableGaitOrder.IndexOf(currentGait);
@@ -480,7 +477,7 @@ namespace Vintagestory.GameContent
         }
 
         float angularMotionWild = 1/10f;
-
+        bool wasSwimming = false;
         protected void updateRidingState()
         {
             if (!AnyMounted()) return;
@@ -539,6 +536,18 @@ namespace Vintagestory.GameContent
                 eagent.AnimManager.StopAnimation(meta.Animation);
             }
 
+            // Handle transition from swimming to walking
+            if (eagent.Swimming)
+            {
+                ebg.CurrentGait = ForwardSpeed > 0 ? ebg.Gaits["swim"] : ebg.Gaits["swimback"];
+            }
+            else if (!eagent.Swimming && wasSwimming)
+            {
+                ebg.CurrentGait = ebg.Gaits["walk"];
+            }
+
+            wasSwimming = eagent.Swimming;
+
             eagent.Controls.Backward = ForwardSpeed < 0;
             eagent.Controls.Forward = ForwardSpeed >= 0;
             eagent.Controls.Sprint = ebg.CurrentGait.IsSprint && ForwardSpeed > 0;
@@ -576,8 +585,8 @@ namespace Vintagestory.GameContent
             {
                 nowControlMeta = Controls.FirstOrDefault(c => c.Key == ebg.CurrentGait.Code).Value;
 
-                nowControlMeta = eagent.Swimming ? Controls["swim"] : nowControlMeta;
-
+                nowControlMeta ??= Controls["idle"];
+                                
                 eagent.Controls.Jump = jumpNow;
 
                 if (jumpNow)
