@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -8,6 +9,7 @@ using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
 using Vintagestory.API.Datastructures;
 using Vintagestory.API.MathTools;
+using Vintagestory.Client.NoObf;
 
 #nullable disable
 
@@ -61,6 +63,7 @@ namespace Vintagestory.GameContent
         protected GaitMeta saddleBreakGait;
         protected string saddleBreakGaitCode;
         protected bool onlyTwoGaits = false;
+        protected GaitMeta sprintGait;
 
         ControlMeta curControlMeta = null;
         bool shouldMove = false;
@@ -172,6 +175,7 @@ namespace Vintagestory.GameContent
 
             onlyTwoGaits = RideableGaitOrder.Count(g => g.MoveSpeed > 0 && g.Backwards == false) == 2;
             saddleBreakGait = ebg.Gaits.FirstOrDefault(g => g.Value.Code == saddleBreakGaitCode).Value;
+            sprintGait = RideableGaitOrder.LastOrDefault(g => g.IsSprint && g.MoveSpeed > 0);
         }
 
         public override void OnEntityDespawn(EntityDespawnData despawn)
@@ -299,9 +303,34 @@ namespace Vintagestory.GameContent
             }
         }
 
-        bool prevForwardKey, prevBackwardKey, prevSprintKey;
-        public void SpeedUp() => SetNextGait(true);
-        public void SlowDown() => SetNextGait(false);
+        bool prevForwardKey, prevBackwardKey, prevSprintKey, prevSneakKey;
+
+        public void SpeedUp()
+        {
+            SetNextGait(true);
+        }
+
+        public void SlowDown()
+        {
+            SetNextGait(false);
+            isSprinting = false;
+        }
+
+        public void Sprint()
+        {
+            if (ebg.IsForward && !ebg.IsIdle)
+            {
+                prevGait = ebg.CurrentGait;
+                isSprinting = SetNextGait(true, sprintGait);
+            }
+        }
+
+        public void StopSprint()
+        {
+            if (!isSprinting) return;
+
+            isSprinting = !SetNextGait(false, prevGait ?? ebg.IdleGait);
+        }
 
         public GaitMeta GetNextGait(bool forward, GaitMeta currentGait = null)
         {
@@ -316,7 +345,7 @@ namespace Vintagestory.GameContent
 
                 // Boundary behavior
                 if (nextIndex < 0) nextIndex = 0;
-                if (nextIndex >= RideableGaitOrder.Count) nextIndex = currentIndex - 1;
+                if (nextIndex >= RideableGaitOrder.Count) nextIndex = currentIndex;
 
                 return RideableGaitOrder[nextIndex];
             }
@@ -326,13 +355,19 @@ namespace Vintagestory.GameContent
             }
         }
 
-        public void SetNextGait(bool forward, GaitMeta nextGait = null)
+        public bool SetNextGait(bool forward, GaitMeta nextGait = null)
         {
-            if (api.Side != EnumAppSide.Server) return;
+            if (api.Side != EnumAppSide.Server) return false;
+
+            long nowMs = entity.World.ElapsedMilliseconds;
+            if (nowMs - lastGaitChangeMs < 300) return false;
 
             nextGait ??= GetNextGait(forward);
 
             ebg.CurrentGait = nextGait;
+
+            lastGaitChangeMs = nowMs;
+            return true;
         }
 
         public GaitMeta GetFirstForwardGait()
@@ -344,6 +379,9 @@ namespace Vintagestory.GameContent
             return RideableGaitOrder.FirstOrDefault(g => !g.Backwards && g.MoveSpeed > 0) ?? ebg.IdleGait;
         }
 
+        private GaitMeta prevGait;
+        private bool isSprinting;
+        private bool forwardTrigger, backwardTrigger, sprintTrigger, relaxTrigger, accelerateTrigger, decelerateTrigger, idleTrigger;
         public virtual Vec2d SeatsToMotion(float dt)
         {
             int seatsRowing = 0;
@@ -436,59 +474,88 @@ namespace Vintagestory.GameContent
                 if (!canride) continue;
 
 
-                // Only able to jump every 1500ms. Only works while on the ground. (But for clients on the pillion we omit the ground check, because the elk already left the ground before we receive the Jump control) 
+                // Only able to jump every 1500ms. Only works while on the ground. (But for clients on the pillion we omit the ground check, because the elk already left the ground before we receive the Jump control)
                 if (controls.Jump && entity.World.ElapsedMilliseconds - lastJumpMs > 1500 && entity.Alive && (entity.OnGround || coyoteTimer > 0 || (api.Side == EnumAppSide.Client && entity.EntityId != Controller.EntityId)))
                 {
                     lastJumpMs = entity.World.ElapsedMilliseconds;
                     jumpNow = true;
                 }
 
-                if (scheme == EnumControlScheme.Hold && !controls.TriesToMove) continue;
+                //if (scheme == EnumControlScheme.Hold && !controls.TriesToMove) continue;
 
                 float str = ++seatsRowing == 1 ? 1 : 0.5f;
 
                 // Detect if button currently being pressed
-                bool nowForwards = controls.Forward;
-                bool nowBackwards = controls.Backward;
-                bool nowSprint = controls.Sprint;
+                bool nowForwards = controls.Forward; // W is currently being pressed
+                bool nowBackwards = controls.Backward; // S is currently being pressed
+                bool nowSprint = controls.Sprint; // Ctrl is currently being pressed
+                bool nowSneak = controls.Sneak; // Shift is currently being pressed
 
-                // Toggling this off so that the next press of the sprint key will be a fresh press
-                // Need this to allow cycling up with sprint rather than just treating it as a boolean
-                // Only applies if there are more than two gaits specified for this mount
-                controls.Sprint = onlyTwoGaits && controls.Sprint;
+                // Note: controls.Sprint remains true after tapping sprint until you release W if toggle sprint enabled
 
                 // Detect if current press is a fresh press
-                bool forwardPressed = nowForwards && !prevForwardKey;
-                bool backwardPressed = nowBackwards && !prevBackwardKey;
-                bool sprintPressed = nowSprint && !prevSprintKey;
-                long nowMs = entity.World.ElapsedMilliseconds;
+                bool forwardPressed = nowForwards && !prevForwardKey; // New W press
+                bool forwardReleased = !nowForwards && prevForwardKey; // W key released
 
-                // This ensures we start moving without sprint key
-                if (forwardPressed && ebg.IsIdle) SpeedUp();
+                bool backwardPressed = nowBackwards && !prevBackwardKey; // New S press
+                bool backwardReleased = !nowBackwards && prevBackwardKey; // S key released
 
-                // Handle backward to idle change without sprint key
-                if (forwardPressed && ebg.IsBackward) ebg.SetIdle();
+                bool sprintPressed = nowSprint && !prevSprintKey; // New sprint press
+                bool sprintReleased = !nowSprint && prevSprintKey; // Sprint key released
 
-                // Cycle up with sprint
-                if (ebg.IsForward && sprintPressed && nowMs - lastGaitChangeMs > 300)
+                bool sneakPressed = nowSneak && !prevSneakKey; // New sneak press
+
+                // Curb Bit
+                if (scheme == EnumControlScheme.Press)
                 {
-                    SpeedUp();
+                    // - Increase gait: Tap W
+                    if (forwardPressed) accelerateTrigger = true; // SpeedUp();
 
-                    lastGaitChangeMs = nowMs;
+                    // - Decrease gait: Tap S
+                    if (backwardPressed) decelerateTrigger = true; //SlowDown();
+
+                    // - Sprint (max gait): Sprint key
+                    if (ClientSettings.ToggleSprint)
+                    {
+                        if (sprintPressed && !isSprinting) sprintTrigger = true; //Sprint();
+                        if (sprintPressed && isSprinting) relaxTrigger = true; //StopSprint();
+                    }
+                    else
+                    {
+                        if (sprintPressed) sprintTrigger = true; //Sprint();
+                        if (!nowSprint && isSprinting) relaxTrigger = true; //StopSprint();
+                        if (sprintReleased) relaxTrigger = true; //StopSprint();
+                    }
+
+                    // - Decrease gait: Tap Sneak
+                    if (sneakPressed) decelerateTrigger = true; //SlowDown();
+                }
+                // Snaffle Bit
+                else if (scheme == EnumControlScheme.Hold)
+                {
+                    // - Walk: Tap W
+                    if (forwardPressed && ebg.IsIdle) accelerateTrigger = true; // SpeedUp();
+                    if (forwardReleased) ebg.SetIdle();
+
+                    // - Walkback: Tap S
+                    if (backwardPressed) decelerateTrigger = true; //SlowDown();
+                    if (ebg.IsBackward && !nowBackwards) ebg.SetIdle();
+
+                    // - Increase gait: Tap Sprint
+                    if (nowForwards && sprintPressed) accelerateTrigger = true; // SpeedUp();
+
+                    // - Decrease gait: Tap Sneak
+                    if (nowForwards && sneakPressed) decelerateTrigger = true; //SlowDown();
+
+                    // If toggle sprint enabled reset sprint so we can detect it next tick
+                    if (ClientSettings.ToggleSprint) controls.Sprint = false;
                 }
 
-                // Cycle down with back or when letting go of sprint when there are only two gaits
-                if (backwardPressed && nowMs - lastGaitChangeMs > 300 || (!nowSprint && ebg.CurrentGait.IsSprint))
-                {
-                    controls.Sprint = false;
-                    SlowDown();
-
-                    lastGaitChangeMs = nowMs;
-                }
 
                 prevSprintKey = nowSprint;
-                prevForwardKey = scheme == EnumControlScheme.Press && nowForwards;
-                prevBackwardKey = scheme == EnumControlScheme.Press && nowBackwards;
+                prevForwardKey = nowForwards;
+                prevBackwardKey = nowBackwards;
+                prevSneakKey = nowSneak;
 
                 #region Motion update
                 if (canturn && (controls.Left || controls.Right))
@@ -586,7 +653,15 @@ namespace Vintagestory.GameContent
 
             eagent.Controls.Backward = ForwardSpeed < 0;
             eagent.Controls.Forward = ForwardSpeed >= 0;
-            eagent.Controls.Sprint = ebg.CurrentGait.IsSprint && ForwardSpeed > 0;
+            eagent.Controls.Sprint = isSprinting && ForwardSpeed > 0;
+
+            HandleTrigger(ref forwardTrigger, SpeedUp);
+            HandleTrigger(ref backwardTrigger, SlowDown);
+            HandleTrigger(ref accelerateTrigger, SpeedUp);;
+            HandleTrigger(ref decelerateTrigger, SlowDown);
+            HandleTrigger(ref sprintTrigger, Sprint);
+            HandleTrigger(ref relaxTrigger, StopSprint);
+            HandleTrigger(ref idleTrigger, () => ebg.SetIdle());
 
             string nowTurnAnim=null;
             if (ForwardSpeed >= 0)
@@ -676,6 +751,15 @@ namespace Vintagestory.GameContent
             }
         }
 
+        void HandleTrigger(ref bool trigger, Action action)
+        {
+            if (trigger)
+            {
+                action();
+                trigger = false;
+            }
+        }
+
         private void ConvertToTamedAnimal()
         {
             var api = entity.World.Api;
@@ -720,9 +804,10 @@ namespace Vintagestory.GameContent
         }
 
 
-
+        private float timeSinceLog = 0f;
         public override void OnGameTick(float dt)
         {
+
             if (api.Side == EnumAppSide.Server)
             {
                 updateAngleAndMotion(dt);

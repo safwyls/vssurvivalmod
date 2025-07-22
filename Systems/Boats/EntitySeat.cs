@@ -98,7 +98,12 @@ namespace Vintagestory.GameContent
 
         internal void onControls(EnumEntityAction action, bool on, ref EnumHandling handled)
         {
-            if (action == EnumEntityAction.Sneak && on)
+            bool idle = Entity.GetBehavior<EntityBehaviorGait>()?.IsIdle ?? true;
+
+            bool mountedSneak = action == EnumEntityAction.Sneak && on;
+            bool mountedSprint = action == EnumEntityAction.Sprint && on;
+
+            if ((mountedSneak && (idle || controls.Sprint)) || (mountedSprint && controls.Sneak))
             {
                 (Passenger as EntityAgent)?.TryUnmount();
                 controls.StopAllMovement();
