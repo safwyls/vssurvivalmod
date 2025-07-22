@@ -370,6 +370,17 @@ namespace Vintagestory.GameContent
             return true;
         }
 
+        public void Dismount(DamageSource dmgSource = null, float dmg = 0)
+        {
+            foreach (var seat in Seats)
+            {
+                if (seat?.Passenger == null) continue;
+                var rider = seat.Passenger as EntityAgent;
+                if (dmgSource != null) rider?.ReceiveDamage(dmgSource, dmg);
+                rider?.TryUnmount();
+            }
+        }
+
         public GaitMeta GetFirstForwardGait()
         {
             if (RideableGaitOrder == null || RideableGaitOrder.Count == 0)
@@ -381,7 +392,7 @@ namespace Vintagestory.GameContent
 
         private GaitMeta prevGait;
         private bool isSprinting;
-        private bool forwardTrigger, backwardTrigger, sprintTrigger, relaxTrigger, accelerateTrigger, decelerateTrigger, idleTrigger;
+        private bool forwardTrigger, backwardTrigger, sprintTrigger, relaxTrigger, accelerateTrigger, decelerateTrigger, idleTrigger, dismountTrigger;
         public virtual Vec2d SeatsToMotion(float dt)
         {
             int seatsRowing = 0;
@@ -475,7 +486,7 @@ namespace Vintagestory.GameContent
 
 
                 // Only able to jump every 500ms. Only works while on the ground. (But for clients on the pillion we omit the ground check, because the elk already left the ground before we receive the Jump control)
-                if (controls.Jump && entity.World.ElapsedMilliseconds - lastJumpMs > 500 && entity.Alive && (entity.OnGround || coyoteTimer > 0 || (api.Side == EnumAppSide.Client && entity.EntityId != Controller.EntityId)))
+                if (controls.Jump && entity.World.ElapsedMilliseconds - lastJumpMs > 1000 && entity.Alive && (entity.OnGround || coyoteTimer > 0 || (api.Side == EnumAppSide.Client && entity.EntityId != Controller.EntityId)))
                 {
                     lastJumpMs = entity.World.ElapsedMilliseconds;
                     jumpNow = true;
@@ -528,7 +539,7 @@ namespace Vintagestory.GameContent
                     }
 
                     // - Decrease gait: Tap Sneak
-                    if (sneakPressed) decelerateTrigger = true; //SlowDown();
+                    if (sneakPressed) dismountTrigger = true; //SlowDown();
                 }
                 // Snaffle Bit
                 else if (scheme == EnumControlScheme.Hold)
@@ -591,18 +602,18 @@ namespace Vintagestory.GameContent
                     foreach (var seat in Seats)
                     {
                         if (seat?.Passenger == null) continue;
-                        var eagent = seat.Passenger as EntityAgent;
 
-                        if (api.World.Rand.NextDouble() < 0.5) eagent.ReceiveDamage(new DamageSource()
+                        float damage = 1 + api.World.Rand.Next(8) / 4f;
+                        DamageSource dmgSrc = new DamageSource()
                         {
                             CauseEntity = entity,
                             DamageTier = 1,
                             Source = EnumDamageSource.Entity,
                             SourcePos = this.Position.XYZ,
                             Type = EnumDamageType.BluntAttack
-                        }, 1 + api.World.Rand.Next(8) / 4f);
+                        };
 
-                        eagent.TryUnmount();
+                        Dismount(api.World.Rand.NextDouble() < 0.5 ? dmgSrc : null, damage);
                     }
 
                     jumpNow = false;
@@ -662,6 +673,10 @@ namespace Vintagestory.GameContent
             HandleTrigger(ref sprintTrigger, Sprint);
             HandleTrigger(ref relaxTrigger, StopSprint);
             HandleTrigger(ref idleTrigger, () => ebg.SetIdle());
+            HandleTrigger(ref dismountTrigger, () =>
+            {
+                Dismount();
+            });
 
             string nowTurnAnim=null;
             if (ForwardSpeed >= 0)
