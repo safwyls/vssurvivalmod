@@ -474,8 +474,8 @@ namespace Vintagestory.GameContent
                 if (!canride) continue;
 
 
-                // Only able to jump every 1500ms. Only works while on the ground. (But for clients on the pillion we omit the ground check, because the elk already left the ground before we receive the Jump control)
-                if (controls.Jump && entity.World.ElapsedMilliseconds - lastJumpMs > 1500 && entity.Alive && (entity.OnGround || coyoteTimer > 0 || (api.Side == EnumAppSide.Client && entity.EntityId != Controller.EntityId)))
+                // Only able to jump every 500ms. Only works while on the ground. (But for clients on the pillion we omit the ground check, because the elk already left the ground before we receive the Jump control)
+                if (controls.Jump && entity.World.ElapsedMilliseconds - lastJumpMs > 500 && entity.Alive && (entity.OnGround || coyoteTimer > 0 || (api.Side == EnumAppSide.Client && entity.EntityId != Controller.EntityId)))
                 {
                     lastJumpMs = entity.World.ElapsedMilliseconds;
                     jumpNow = true;
